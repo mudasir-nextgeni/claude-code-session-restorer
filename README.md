@@ -3,10 +3,11 @@
 Restore Claude Code chat sessions that disappeared from the **Claude Desktop "Code" tab** —
 most commonly **after logging in with a different Claude account**, or for sessions you
 started from the **CLI / VS Code** that never showed up in the app. A safe, **reversible**
-Windows PowerShell tool (also packaged as a Claude skill).
+tool for **Windows** (PowerShell), **macOS** and **Linux / Ubuntu** (Python 3) — also packaged as a Claude skill.
 
-![Platform](https://img.shields.io/badge/platform-Windows-blue)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-blue)
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 > **TL;DR** — Your conversations were never deleted. The Code tab just can't see them
@@ -17,10 +18,10 @@ Windows PowerShell tool (also packaged as a Claude skill).
 
 ## What's included
 
-| Script | Use it when |
+| Script (Windows / macOS + Linux) | Use it when |
 |--------|-------------|
-| **`restore-code-tab-sessions.ps1`** | Your transcripts exist but don't show in the Code tab (you switched accounts, or started sessions from the CLI / VS Code). Rebuilds the per-account session index. |
-| **`claude-code-backup-restore.ps1`** | You want a full backup of your transcripts + index (disaster recovery, new machine, before reinstalling, or to beat the 30-day auto-cleanup) — and to restore it anywhere. |
+| **`restore-code-tab-sessions.ps1`** / **`.py`** | Your transcripts exist but don't show in the Code tab (you switched accounts, or started sessions from the CLI / VS Code). Rebuilds the per-account session index. |
+| **`claude-code-backup-restore.ps1`** / **`.py`** | You want a full backup of your transcripts + index (disaster recovery, new machine, before reinstalling, or to beat the 30-day auto-cleanup) — and to restore it anywhere. |
 
 ## The problem
 
@@ -40,7 +41,7 @@ The conversations themselves are **not lost** — only the app's *index* of them
 Claude Code stores every conversation as a transcript on disk:
 
 ```
-%USERPROFILE%\.claude\projects\<encoded-working-dir>\<sessionId>.jsonl
+~/.claude/projects/<encoded-working-dir>/<sessionId>.jsonl      (Windows: %USERPROFILE%\.claude\projects\...)
 ```
 
 These transcripts are keyed by **project folder** and carry **no account information** —
@@ -50,8 +51,14 @@ But the **Code tab doesn't read those transcripts directly.** It reads small per
 "card" files, stored **per account**:
 
 ```
-%APPDATA%\Claude\claude-code-sessions\<accountId>\<organizationId>\local_*.json
+<app dir>/claude-code-sessions/<accountId>/<organizationId>/local_*.json
 ```
+
+| OS | `<app dir>` |
+|----|-------------|
+| Windows | `%APPDATA%\Claude` |
+| macOS | `~/Library/Application Support/Claude` |
+| Linux | `~/.config/Claude` (or `$XDG_CONFIG_HOME/Claude`) |
 
 Each card points back to a transcript via a `cliSessionId` field. The cards contain **no
 account field** — they're scoped purely by which account folder they live in. So:
@@ -73,6 +80,8 @@ any IDs. Re-running is safe — it never creates duplicates.
 
 ## Usage
 
+### Windows
+
 1. **Quit Claude Desktop completely.** Also check the system tray → right-click → **Quit**.
    (The app rewrites this folder when it exits, so it must be closed.)
 2. Open **PowerShell** and run:
@@ -83,19 +92,39 @@ any IDs. Re-running is safe — it never creates duplicates.
 
 3. **Reopen Claude Desktop → Code tab.** Your sessions should be listed.
 
+### macOS / Linux (Ubuntu)
+
+Needs Python 3.8+ (preinstalled on Ubuntu; on macOS run `xcode-select --install` if
+`python3` is missing). No extra packages.
+
+1. **Quit Claude Desktop completely** (macOS: <kbd>⌘Q</kbd>; Linux: quit from the app menu /
+   tray icon). The script refuses to run while the desktop app (`Claude` on macOS,
+   `claude-desktop` on Linux) is running — the `claude` CLI can stay open.
+2. Run:
+
+   ```bash
+   python3 restore-code-tab-sessions.py
+   ```
+
+3. **Reopen Claude Desktop → Code tab.**
+
 ### Options
 
-| Flag | Effect |
+| Flag (PowerShell / Python) | Effect |
 |------|--------|
-| `-ExistingCardsOnly` | Only migrate sessions **originally created in the desktop Code tab** (copy existing cards from other accounts). **Skips CLI / VS Code sessions.** Use this when moving between accounts and you don't want CLI sessions cluttering the list. |
-| `-DestRoot <path>` | Write cards to a throwaway folder instead of the live one (dry run / testing). |
-| `-IgnoreRunning` | Don't abort if Claude appears to be running. |
-| `-NoBackup` | Skip the index backup (testing only). |
+| `-ExistingCardsOnly` / `--existing-cards-only` | Only migrate sessions **originally created in the desktop Code tab** (copy existing cards from other accounts). **Skips CLI / VS Code sessions.** Use this when moving between accounts and you don't want CLI sessions cluttering the list. |
+| `-DestRoot <path>` / `--dest-root <path>` | Write cards to a throwaway folder instead of the live one (dry run / testing). |
+| `-IgnoreRunning` / `--ignore-running` | Don't abort if Claude appears to be running. |
+| `-NoBackup` / `--no-backup` | Skip the index backup (testing only). |
 
 Example — migrate only real Code-tab sessions between accounts:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\restore-code-tab-sessions.ps1 -ExistingCardsOnly
+```
+
+```bash
+python3 restore-code-tab-sessions.py --existing-cards-only
 ```
 
 ## Is it safe? Can I undo it?
@@ -106,13 +135,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\restore-code-tab-sessions.
 - **To undo:** delete the cards it added (or restore the `_backup_` folder over
   `claude-code-sessions`), then restart Claude Desktop.
 
-It's also wise to back up `%USERPROFILE%\.claude\projects` (your actual transcripts) once,
+It's also wise to back up `~/.claude/projects` (your actual transcripts) once,
 independent of this tool.
 
 ## A note on transcript retention
 
 Claude Code auto-deletes old transcripts after a number of days (`cleanupPeriodDays`,
-default 30). To keep history longer, add this to `%USERPROFILE%\.claude\settings.json`:
+default 30). To keep history longer, add this to `~/.claude/settings.json`
+(`%USERPROFILE%\.claude\settings.json` on Windows):
 
 ```json
 { "cleanupPeriodDays": 3650 }
@@ -120,8 +150,8 @@ default 30). To keep history longer, add this to `%USERPROFILE%\.claude\settings
 
 ## Full backup & restore (the "everything" tool)
 
-`claude-code-backup-restore.ps1` backs up and restores everything that matters — your
-**transcripts** (`%USERPROFILE%\.claude\projects`), the **Code-tab index**, and
+`claude-code-backup-restore.ps1` (Windows) / `claude-code-backup-restore.py` (macOS / Linux)
+backs up and restores everything that matters — your **transcripts** (`~/.claude/projects`), the **Code-tab index**, and
 `settings.json`. Transcripts carry no account info, so a backup restores cleanly under **any
 account, on any machine**.
 
@@ -137,9 +167,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\claude-code-backup-restore
 powershell -NoProfile -ExecutionPolicy Bypass -File .\claude-code-backup-restore.ps1 -Restore -Path "D:\Backups\claude-code-backup_YYYYMMDD_HHMMSS"
 ```
 
+On macOS / Linux:
+
+```bash
+python3 claude-code-backup-restore.py --path ~/Backups
+python3 claude-code-backup-restore.py --restore --path ~/Backups/claude-code-backup_YYYYMMDD_HHMMSS
+```
+
 Close Claude Desktop before restoring the Code-tab index (the script skips it automatically if
-Claude is running). Options: `-TranscriptsOnly`, `-Force`, `-IgnoreRunning`. After restoring
-under a different account, run `restore-code-tab-sessions.ps1` to make the sessions appear in
+Claude is running). Options: `-TranscriptsOnly`, `-Force`, `-IgnoreRunning` (Python:
+`--transcripts-only`, `--force`, `--ignore-running`). After restoring under a different
+account, run the restorer (`restore-code-tab-sessions.ps1` / `.py`) to make the sessions appear in
 the Code tab.
 
 ## Resuming without the app
@@ -147,7 +185,7 @@ the Code tab.
 Independently of the Code tab, you can always resume on the command line. From the
 project's folder:
 
-```powershell
+```bash
 claude --resume            # pick from a list
 claude --resume <sessionId>
 claude --continue          # most recent session in this folder
@@ -163,9 +201,11 @@ your skills directory and Claude can run the restore for you when you say things
 
 ## Compatibility
 
-- **Windows** + Windows PowerShell 5.1 or PowerShell 7.
-- macOS / Linux use the same card concept under different paths
-  (e.g. `~/Library/Application Support/Claude/…` on macOS). Ports/PRs welcome.
+- **Windows** + Windows PowerShell 5.1 or PowerShell 7 → `.ps1` scripts.
+- **Linux (Ubuntu)** + Python 3.8+ → `.py` scripts. Card path verified on Ubuntu with the
+  `claude-desktop` package.
+- **macOS** + Python 3.8+ → `.py` scripts. Uses `~/Library/Application Support/Claude`;
+  not yet verified on a real Mac — reports welcome.
 
 ## How it works (technical)
 

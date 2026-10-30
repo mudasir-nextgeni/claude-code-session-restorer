@@ -1,6 +1,9 @@
 # Never commit local session data, backups, or personal config
 *_backup_*/
 _dryrun/
+_test/
+claude-code-backup_*/
+__pycache__/
 *.jsonl
 .claude/
 .claude.json

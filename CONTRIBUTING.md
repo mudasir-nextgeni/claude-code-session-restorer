@@ -9,7 +9,8 @@ tool — contributions of every size are welcome, from typo fixes to a full macO
 
 ## Good first contributions
 
-- 🍎🐧 **macOS / Linux port** — the most-wanted. See *Porting to other OSes* below.
+- 🍎 **Verify on macOS** — the Python port picks `~/Library/Application Support/Claude` and the
+  `Claude` process name, but hasn't been confirmed on a real Mac yet.
 - 🐛 **App-version compatibility** — if a Claude Desktop update changes the card format or
   folder layout, a fix here helps everyone.
 - 📝 **Docs** — clearer steps, troubleshooting, screenshots/GIFs.
@@ -19,8 +20,10 @@ tool — contributions of every size are welcome, from typo fixes to a full macO
 
 | File | What it is |
 |------|------------|
-| `restore-code-tab-sessions.ps1` | Rebuilds the per-account Code-tab session index. |
-| `claude-code-backup-restore.ps1` | Full backup & restore of transcripts + index + settings. |
+| `restore-code-tab-sessions.ps1` | Rebuilds the per-account Code-tab session index (Windows). |
+| `claude-code-backup-restore.ps1` | Full backup & restore of transcripts + index + settings (Windows). |
+| `restore-code-tab-sessions.py` | macOS / Linux port of the restorer (Python 3.8+, stdlib only). |
+| `claude-code-backup-restore.py` | macOS / Linux port of backup & restore. |
 | `SKILL.md` | Claude skill wrapper. |
 | `README.md` | User documentation. |
 
@@ -54,20 +57,22 @@ field** — they're scoped only by their folder. Notable fields:
 
 New cards must be written as **UTF-8 without a BOM**.
 
-## Porting to other OSes
+## Platform paths
 
 The transcript path (`~/.claude/projects/`) is the same everywhere — only the Code-tab card
-index location differs. The values below are **unverified** — please confirm on a real install
-and update the docs in your PR:
+index location and the desktop app's process name differ:
 
-| OS | Likely card-index base |
-|----|------------------------|
-| Windows | `%APPDATA%\Claude\claude-code-sessions` |
-| macOS | `~/Library/Application Support/Claude/claude-code-sessions` *(confirm)* |
-| Linux | `~/.config/Claude/claude-code-sessions` *(confirm)* |
+| OS | Card-index base | Desktop process | Status |
+|----|-----------------|-----------------|--------|
+| Windows | `%APPDATA%\Claude\claude-code-sessions` | `Claude` | verified |
+| macOS | `~/Library/Application Support/Claude/claude-code-sessions` | `Claude` | *unverified — please confirm* |
+| Linux | `~/.config/Claude/claude-code-sessions` (`$XDG_CONFIG_HOME` respected) | `claude-desktop` | verified (Ubuntu) |
 
-A port can be a Bash/Python script that mirrors the PowerShell logic, or a cross-platform
-rewrite — just keep the same safety guarantees.
+The "is Claude running" check must match the **desktop app only**, never the `claude` CLI /
+VS Code binary — the Python scripts use an exact, case-sensitive `pgrep -x`.
+
+The `.ps1` and `.py` scripts mirror each other step for step — when you change one, change
+the other.
 
 ## Development & testing
 
@@ -81,12 +86,23 @@ rewrite — just keep the same safety guarantees.
 .\claude-code-backup-restore.ps1 -Path .\_test
 ```
 
+```bash
+# Same for the Python port
+python3 restore-code-tab-sessions.py --dest-root ./_dryrun --ignore-running --no-backup
+python3 claude-code-backup-restore.py --path ./_test
+
+# Fully isolated: point HOME at a fake home with synthetic transcripts/cards
+HOME=/tmp/fakehome python3 restore-code-tab-sessions.py --ignore-running
+```
+
 Checklist before opening a PR:
 
 - [ ] Backs up before writing; **never deletes**; doesn't overwrite newer data without `-Force`.
 - [ ] **Idempotent** — safe to run twice (no duplicate cards).
 - [ ] Writes JSON as UTF-8 **without a BOM**.
 - [ ] Windows scripts stay **Windows PowerShell 5.1**–compatible (no PS7-only syntax).
+- [ ] Python scripts stay **Python 3.8**–compatible and **standard library only**.
+- [ ] `.ps1` and `.py` versions still behave the same.
 - [ ] Tested against a dry-run/temp folder — say what you tested in the PR.
 
 ## Privacy rules (important)
@@ -96,7 +112,7 @@ This repo must contain **zero** personal data. Before you commit:
 - Never commit transcripts (`*.jsonl`), backups (`*_backup_*`), `.claude/`, or `.claude.json`
   — `.gitignore` already blocks these; don't override it.
 - Never hardcode user paths, account/organization IDs, emails, or machine names. Use
-  `$env:USERPROFILE`, `$env:APPDATA`, `$HOME`, etc.
+  `$env:USERPROFILE`, `$env:APPDATA`, `$HOME`, `os.path.expanduser('~')`, etc.
 - When filing issues, **redact** your account/organization IDs and email.
 
 ## Submitting changes
