@@ -16,6 +16,97 @@ tool for **Windows** (PowerShell), **macOS** and **Linux / Ubuntu** (Python 3) �
 
 ---
 
+## Quick start
+
+### Step 0 — Download the tool (once)
+
+Open a terminal (**Ubuntu:** Ctrl + Alt + T · **macOS:** ⌘ + Space → *Terminal* · **Windows:** Start → *PowerShell*) and run:
+
+```bash
+git clone https://github.com/mudasir-nextgeni/claude-code-session-restorer.git ~/claude-code-session-restorer
+```
+
+No `git`? Click **Code → Download ZIP** on this page, unzip it into your home folder, and rename the folder to
+`claude-code-session-restorer`. On macOS, if you later see *"python3: command not found"*, run
+`xcode-select --install` once.
+
+### Make a backup
+
+Saves a copy of all your sessions into a `Backups` folder in your home folder. Claude can stay open.
+
+Ubuntu / macOS:
+
+```bash
+python3 ~/claude-code-session-restorer/claude-code-backup-restore.py --path ~/Backups
+```
+
+Windows (PowerShell):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\claude-code-session-restorer\claude-code-backup-restore.ps1" -Path "$HOME\Backups"
+```
+
+### Switched accounts? Get your sessions back
+
+You don't need a backup for this — your sessions are still on your computer; this makes the Code tab show them again.
+
+1. **Quit Claude Desktop completely** (closing the window is not enough):
+   - **Ubuntu:** run `pkill -x claude-desktop`
+   - **macOS:** press ⌘ + Q while Claude is in front
+   - **Windows:** right-click the Claude icon near the clock → **Quit**
+2. **Run:**
+
+   Ubuntu / macOS:
+
+   ```bash
+   python3 ~/claude-code-session-restorer/restore-code-tab-sessions.py
+   ```
+
+   Windows (PowerShell):
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\claude-code-session-restorer\restore-code-tab-sessions.ps1"
+   ```
+
+3. **Open Claude Desktop → Code tab.** Your sessions are back.
+
+Only want sessions from your old account, not terminal / VS Code ones? Add `--existing-cards-only`
+(Windows: `-ExistingCardsOnly`).
+
+### New computer, or sessions deleted? Restore your backup
+
+1. Quit Claude Desktop (as above).
+2. Put your backup back — use your own backup's folder name from `Backups`:
+
+   Ubuntu / macOS:
+
+   ```bash
+   python3 ~/claude-code-session-restorer/claude-code-backup-restore.py --restore --path ~/Backups/claude-code-backup_20261030_171300
+   ```
+
+   Windows (PowerShell):
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File "$HOME\claude-code-session-restorer\claude-code-backup-restore.ps1" -Restore -Path "$HOME\Backups\claude-code-backup_20261030_171300"
+   ```
+
+3. Run the **"get your sessions back"** command above, then open Claude Desktop.
+
+Restoring only adds what's missing — it never deletes anything or replaces a newer file.
+
+### Good to know
+
+- **Safe:** before changing anything it backs up the Code tab's session list (`claude-code-sessions_backup_<date>`,
+  next to the original). It never edits or deletes your conversations. Running it twice never creates duplicates.
+- **Undo:** quit Claude, replace the `claude-code-sessions` folder with the `_backup_` copy, reopen Claude. It lives in
+  `~/.config/Claude` (Ubuntu), `~/Library/Application Support/Claude` (macOS) or `%APPDATA%\Claude` (Windows).
+- **Keep sessions longer:** Claude Code deletes sessions older than 30 days by default — see
+  [transcript retention](#a-note-on-transcript-retention).
+
+The rest of this README explains how it works and every option.
+
+---
+
 ## What's included
 
 | Script (Windows / macOS + Linux) | Use it when |
